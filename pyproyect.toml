@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mazegen-42"
+version = "1.0.0"
+description = "A standard core matrix package designed to build fully interconnected mazes"
+authors = [{ name = "42 Student" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.modules]
+modules = ["a_maze_ing"]
