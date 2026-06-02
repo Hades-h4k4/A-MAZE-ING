@@ -1,8 +1,6 @@
-"""Breadth-First Search maze solving sub-module."""
-
 from typing import Dict, List, Set, Tuple
 
-# Cada celda es un número en binario donde cada bit representa una pared
+# Each cell is a binary number where each bit represents a wall
 NORTH: int = 1
 EAST: int = 2
 SOUTH: int = 4
@@ -16,7 +14,7 @@ MOVE: Dict[int, Tuple[int, int]] = {
 def solve_maze(grid: List[List[int]], entry: Tuple[int, int],
                exit_c: Tuple[int, int]) -> List[str]:
 
-    """Finds the shortest route using a queue-based BFS algorithm."""
+    # Finds the shortest route with BFS algorithm
     queue: List[List[Tuple[int, int]]] = [[entry]]
     visited: Set[Tuple[int, int]] = {entry}
 
@@ -25,15 +23,15 @@ def solve_maze(grid: List[List[int]], entry: Tuple[int, int],
     height = len(grid)
     width = len(grid[0])
 
-    while queue:  # mientras haya caminos por explorar
-        # saca el primero de la lista de queue, pero no de path
+    while queue:  # if you can explore...
+        # pop the first of queue, but not of path
         path: List[Tuple[int, int]] = queue.pop(0)
         curr_r, curr_c = path[-1]  # guardo la ultima
 
         if (curr_r, curr_c) == exit_c:
             letters: List[str] = []
 
-            # comparo 2 posiciones del path para ir formando las letras
+            # compare 2 position of path to form the list(letters)
             for i in range(len(path) - 1):
                 r1, c1 = path[i]
                 r2, c2 = path[i + 1]
@@ -44,10 +42,11 @@ def solve_maze(grid: List[List[int]], entry: Tuple[int, int],
 
         curr_walls: int = grid[curr_r][curr_c]
         for direction, (dr, dc) in MOVE.items():
-            # si no hay pared en esa direccion..
+            # look if there is a wall
             if not (curr_walls & direction):
-                # me muevo a lasiguiente posicion
+                # move to next position
                 nr, nc = curr_r + dr, curr_c + dc
+                # check out of bounds, neither top or bottom
                 if 0 <= nr < height and 0 <= nc < width:
                     if (nr, nc) not in visited:
                         visited.add((nr, nc))
