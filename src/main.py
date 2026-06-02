@@ -31,16 +31,21 @@ THEMES: Dict[str, Dict[str, str]] = {
 def interactive_menu(config_file: str) -> None:
     """Controls interactive loop execution menu handles."""
     config: Dict[str, Any] = parse_config(config_file)
-    current_maze: Optional[MazeGenerator] = None
+    curr_maze: Optional[MazeGenerator] = None
+
+    hide_solved: bool = False
 
     while True:
         current_mode: str = config.get("DISPLAY_MODE", "ascii").upper()
+        sol_status: str = (
+            "HIDDEN" if hide_solved else "VISIBLE")
+
         print("\n" + "=" * 45)
         print(f"     A-MAZE-ING MENU [CURRENT STYLE: {current_mode}]")
         print("=" * 45)
         print("1. Generate New Random Maze")
         print("2. Display Generated Maze")
-        print("3. Solve & Show Visual Path (Colored)")
+        print(f"3. Solve & Show/Hide Visual Path [STATUS: {sol_status}]")
         print("4. Save Generated Output to File")
         print("5. Configure Live Dimensions")
         print("6. Change Visual Style Format")
@@ -51,30 +56,44 @@ def interactive_menu(config_file: str) -> None:
 
         if choice == "1":
             config["SEED"] = random.randint(1, 999999)
-            current_maze = MazeGenerator(config)
-            current_maze.generate()
-            print(f"✔️ Maze successfully initialized with Seed: {config['SEED']}!")
-            current_maze.display(show_solution=False)
+            curr_maze = MazeGenerator(config)
+            curr_maze.generate()
+            print("✔️ Maze successfully initialized with Seed: "
+                  f"{config['SEED']}!")
+            curr_maze.display(
+                show_solution=not hide_solved)
         elif choice == "2":
-            if current_maze:
-                current_maze.display(show_solution=False)
+            if curr_maze:
+                curr_maze.display(
+                    show_solution=not hide_solved)
             else:
                 print("❌ Generate a maze first!")
+
         elif choice == "3":
-            if current_maze:
-                if current_maze.solve():
-                    current_maze.display(show_solution=True)
-                    print(f"Path Instructions: {''.join(current_maze.path_solution)}")
+            if curr_maze:
+                hide_solved = not hide_solved
+                print("✔️ Solution path visibility set to: "
+                      f"{'HIDDEN' if hide_solved else 'VISIBLE'}")
+
+                if not hide_solved:
+                    if curr_maze.solve():
+                        curr_maze.display(show_solution=True)
+                        print("Path Instructions: "
+                              f"{''.join(curr_maze.path_solution)}")
+                    else:
+                        print("❌ No valid path found.")
                 else:
-                    print("❌ No valid path found.")
+                    curr_maze.display(show_solution=False)
             else:
                 print("❌ Generate a maze first!")
+
         elif choice == "4":
-            if current_maze:
-                if not current_maze.path_solution:
-                    current_maze.solve()
-                current_maze.save_to_file()
-                print(f"✔️ Hex data exported successfully to '{current_maze.output_file}'!")
+            if curr_maze:
+                if not curr_maze.path_solution:
+                    curr_maze.solve()
+                curr_maze.save_to_file()
+                print("✔️ Hex data exported successfully to "
+                      f"'{curr_maze.output_file}'!")
             else:
                 print("❌ Generate a maze first!")
         elif choice == "5":
@@ -99,8 +118,8 @@ def interactive_menu(config_file: str) -> None:
                 config["DISPLAY_MODE"] = "blocks"
             elif sub_choice == "3":
                 config["DISPLAY_MODE"] = "smooth"
-            if current_maze:
-                current_maze.display_mode = config["DISPLAY_MODE"]
+            if curr_maze:
+                curr_maze.display_mode = config["DISPLAY_MODE"]
         elif choice == "7":
             sys.exit(0)
 
