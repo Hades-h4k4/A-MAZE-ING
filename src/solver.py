@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Set, Tuple
 
+# Cada celda es un número en binario donde cada bit representa una pared
 NORTH: int = 1
 EAST: int = 2
 SOUTH: int = 4
@@ -12,20 +13,27 @@ MOVE: Dict[int, Tuple[int, int]] = {
 }
 
 
-def solve_maze(grid: List[List[int]], entry: Tuple[int, int], exit_c: Tuple[int, int]) -> List[str]:
+def solve_maze(grid: List[List[int]], entry: Tuple[int, int],
+               exit_c: Tuple[int, int]) -> List[str]:
+
     """Finds the shortest route using a queue-based BFS algorithm."""
     queue: List[List[Tuple[int, int]]] = [[entry]]
     visited: Set[Tuple[int, int]] = {entry}
-    dir_letters: Dict[int, str] = {NORTH: "N", EAST: "E", SOUTH: "S", WEST: "W"}
+
+    dir_letters: Dict[int, str] = {
+        NORTH: "N", EAST: "E", SOUTH: "S", WEST: "W"}
     height = len(grid)
     width = len(grid[0])
 
-    while queue:
+    while queue:  # mientras haya caminos por explorar
+        # saca el primero de la lista de queue, pero no de path
         path: List[Tuple[int, int]] = queue.pop(0)
-        curr_r, curr_c = path[-1]
+        curr_r, curr_c = path[-1]  # guardo la ultima
 
         if (curr_r, curr_c) == exit_c:
             letters: List[str] = []
+
+            # comparo 2 posiciones del path para ir formando las letras
             for i in range(len(path) - 1):
                 r1, c1 = path[i]
                 r2, c2 = path[i + 1]
@@ -36,7 +44,9 @@ def solve_maze(grid: List[List[int]], entry: Tuple[int, int], exit_c: Tuple[int,
 
         curr_walls: int = grid[curr_r][curr_c]
         for direction, (dr, dc) in MOVE.items():
+            # si no hay pared en esa direccion..
             if not (curr_walls & direction):
+                # me muevo a lasiguiente posicion
                 nr, nc = curr_r + dr, curr_c + dc
                 if 0 <= nr < height and 0 <= nc < width:
                     if (nr, nc) not in visited:
