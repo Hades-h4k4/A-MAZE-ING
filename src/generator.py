@@ -1,19 +1,24 @@
 """Iterative DFS maze generation core module."""
-
+# Depth-First Search (Busqueda profunda)
 import random
 from typing import Dict, Any, List, Set, Tuple, Optional
 from src.solver import solve_maze
 
 
+# Type hint alias
 Grid = List[List[int]]
+# Type hint alias
 MatrixBool = List[List[bool]]
 
+# Bitwise mask
 NORTH: int = 1
 EAST: int = 2
 SOUTH: int = 4
 WEST: int = 8
 
+# A dictionary mapping each directional bitmask value to its logical inverse
 OPPOSITE: Dict[int, int] = {NORTH: SOUTH, SOUTH: NORTH, EAST: WEST, WEST: EAST}
+# A dictionary mapping directional masks to physical coordinate offsets
 MOVE: Dict[int, Tuple[int, int]] = {
     NORTH: (-1, 0), EAST: (0, 1), SOUTH: (1, 0), WEST: (0, -1)
 }
@@ -30,61 +35,78 @@ class MazeGenerator:
         c_exit: Tuple[int, int] = config["EXIT"]
         self.entry: Tuple[int, int] = (c_entry[1], c_entry[0])
         self.exit: Tuple[int, int] = (c_exit[1], c_exit[0])
-
         self.output_file: str = str(config["OUTPUT_FILE"])
         self.perfect: bool = bool(config["PERFECT"])
         self.display_mode: str = str(config.get("DISPLAY_MODE", "ascii"))
 
+        # Seed checker
         seed_val: Optional[int] = config.get("SEED")
         self.seed: int = seed_val or random.randint(0, 100000)
+        # save the seed to ramdon for make it reproductible
         random.seed(self.seed)
 
+        # inicialize the grid.
         self.grid: Grid = [[15] * self.width for _ in range(self.height)]
         self.path_solution: List[str] = []
 
+        # fixed minimun space for the 42 pattern
         self.p_rows: int = 5
         self.p_cols: int = 9
+        # Hardcode pattern
         self.pattern: List[List[int]] = [
-            [1, 0, 1, 0, 1, 1, 1, 1, 1],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 0, 0, 0, 1],
             [1, 1, 1, 1, 0, 1, 1, 1, 1],
-            [0, 0, 1, 0, 0, 1, 0, 0, 0],
-            [0, 0, 1, 0, 0, 1, 1, 1, 1]
+            [0, 0, 0, 1, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 1, 1, 1, 1]
         ]
 
     def generate(self) -> None:
         """Carves paths matching constraints and cell coherence."""
+        # check if it fit 42 pattern
         has_42: bool = (
             self.height >= self.p_rows + 2 and self.width >= self.p_cols + 2
         )
+        # Close cells for the maze
         closed_cells: Set[Tuple[int, int]] = set()
 
         if has_42:
+            # were will begin the logo
             start_r: int = (self.height - self.p_rows) // 2
             start_c: int = (self.width - self.p_cols) // 2
+            # Iterates de logo in the maze
             for r in range(self.p_rows):
                 for c in range(self.p_cols):
+                    # Checks if wall or solid
                     if self.pattern[r][c] == 1:
                         grid_r, grid_c = start_r + r, start_c + c
                         self.grid[grid_r][grid_c] = 15
+                        # Adds this absolute position to the pre-filled cells
                         closed_cells.add((grid_r, grid_c))
 
+                        # this loop check every wall around 42 logo is closed
                         for direction, (dr, dc) in MOVE.items():
                             nr, nc = grid_r + dr, grid_c + dc
                             if 0 <= nr < self.height and 0 <= nc < self.width:
                                 self.grid[nr][nc] |= OPPOSITE[direction]
         else:
-            print("⚠️ Error: Maze size too small for '42' pattern.")
+            print("⚠️ Warning: Maze size too small for '42' pattern.")
 
+        # define if the cell is walkable or not.
         visite: MatrixBool = [[False] * self.width for _ in range(self.height)]
         for r, c in closed_cells:
+            # Clossing cells turn into True, so no walkable
             visite[r][c] = True
 
+        # Initializes the DFS backtracking stack array
         stack: List[Tuple[int, int]] = [self.entry]
+        # Marks the starting maze entrance cell as visited to prevent loop back
         visite[self.entry[0]][self.entry[1]] = True
 
+        # while stack no full still going
         while stack:
             curr_r, curr_c = stack[-1]
+            # check if cell could be clear
             neighbors: List[Tuple[int, int, int]] = []
             for direction, (dr, dc) in MOVE.items():
                 nr, nc = curr_r + dr, curr_c + dc
@@ -92,13 +114,13 @@ class MazeGenerator:
                     if not visite[nr][nc]:
                         neighbors.append((direction, nr, nc))
 
+            # create gabs size controled
             if neighbors:
                 direction, nr, nc = random.choice(neighbors)
                 if self.would_crte_3x3_open_spc(curr_r, curr_c, direction):
                     visite[nr][nc] = True
                     continue
 
-                # 1. Open the path by subtracting the wall value from this cell
                 if direction == NORTH:
                     self.grid[curr_r][curr_c] = self.grid[curr_r][curr_c] - 1
                 elif direction == EAST:
@@ -108,7 +130,6 @@ class MazeGenerator:
                 elif direction == WEST:
                     self.grid[curr_r][curr_c] = self.grid[curr_r][curr_c] - 8
 
-                # 2. Open the opposite wall for the next cell so they connect
                 if direction == NORTH:
                     self.grid[nr][nc] = self.grid[nr][nc] - 4
                 elif direction == EAST:
@@ -130,16 +151,14 @@ class MazeGenerator:
             self.grid[r][0] |= WEST
             self.grid[r][self.width - 1] |= EAST
 
+    # Validates corridor widths constraint to avoid large open areas.
     def would_crte_3x3_open_spc(self, r: int, c: int, direction: int) -> bool:
-        """Validates corridor widths constraint to avoid large open areas."""
         dr, dc = MOVE[direction]
         nr, nc = r + dr, c + dc
 
-        # Save the current state of the map to restore it later
         orig_curr = self.grid[r][c]
         orig_neigh = self.grid[nr][nc]
 
-        # Fake the wall removal to check what happens
         if direction == NORTH:
             self.grid[r][c] = self.grid[r][c] - 1
             self.grid[nr][nc] = self.grid[nr][nc] - 4
@@ -153,14 +172,12 @@ class MazeGenerator:
             self.grid[r][c] = self.grid[r][c] - 8
             self.grid[nr][nc] = self.grid[nr][nc] - 2
 
-        # Count how many empty rooms we have nearby
         open_count: int = 0
         for i in range(max(0, r - 1), min(self.height, r + 2)):
             for j in range(max(0, c - 1), min(self.width, c + 2)):
                 if self.grid[i][j] == 0:
                     open_count += 1
 
-        # Put the walls back to how they were before
         self.grid[r][c] = orig_curr
         self.grid[nr][nc] = orig_neigh
 
@@ -171,21 +188,26 @@ class MazeGenerator:
         return len(self.path_solution) > 0
 
     def display(self, show_solution: bool = False) -> None:
-        """Renders the maze using terminal colors."""
-        from src.main import THEMES, COLOR_WALL, COLOR_RESET, COLOR_SE, COLOR_PATH, COLOR_NUM42
+        # Renders the maze using terminal colors.
+        from src.main import THEMES, COLOR_WALL, COLOR_RESET
+        from src.main import COLOR_SE, COLOR_PATH, COLOR_NUM42
         style = THEMES.get(self.display_mode, THEMES["ascii"])
         sol_coords: Set[Tuple[int, int]] = set()
 
         if show_solution and self.path_solution:
             curr_r, curr_c = self.entry
             sol_coords.add((curr_r, curr_c))
-            dir_map: Dict[str, int] = {"N": NORTH, "E": EAST, "S": SOUTH, "W": WEST}
+            dir_map: Dict[str, int] = {
+                "N": NORTH, "E": EAST, "S": SOUTH, "W": WEST}
             for move in self.path_solution:
                 dr, dc = MOVE[dir_map[move]]
                 curr_r, curr_c = curr_r + dr, curr_c + dc
                 sol_coords.add((curr_r, curr_c))
 
-        print(COLOR_WALL + style["corner"] + (style["h_wall"] + style["corner"]) * self.width + COLOR_RESET)
+        print(
+            COLOR_WALL + style["corner"] +
+            (style["h_wall"] + style["corner"]) *
+            self.width + COLOR_RESET)
         for r in range(self.height):
             row_str = COLOR_WALL + style["v_wall"] + COLOR_RESET
             for c in range(self.width):
@@ -200,7 +222,9 @@ class MazeGenerator:
                 else:
                     cell_char = "   "
 
-                wall_east = f"{COLOR_WALL}{style['v_wall']}{COLOR_RESET}" if (self.grid[r][c] & EAST) else style["v_open"]
+                wall_east = (
+                    f"{COLOR_WALL}{style['v_wall']}{COLOR_RESET}"
+                    if (self.grid[r][c] & EAST) else style["v_open"])
                 row_str += cell_char + wall_east
             print(row_str)
 
@@ -210,15 +234,17 @@ class MazeGenerator:
                     f"{COLOR_WALL}{style['h_wall']}{COLOR_RESET}"
                     if (self.grid[r][c] & SOUTH) else style["h_open"]
                     )
-                bottom_str += wall_south + f"{COLOR_WALL}{style['corner']}{COLOR_RESET}"
+                bottom_str += (
+                    wall_south + f"{COLOR_WALL}{style['corner']}{COLOR_RESET}")
             print(bottom_str)
 
     def save_to_file(self) -> None:
-        """Saves matrix exactly matching Section IV.5 rules."""
         try:
             with open(self.output_file, "w", encoding="utf-8") as f:
                 for r in range(self.height):
-                    hex_row = "".join([hex(self.grid[r][c])[2:].upper() for c in range(self.width)])
+                    hex_row = (
+                        "".join([hex(self.grid[r][c])[2:].upper()
+                                 for c in range(self.width)]))
                     f.write(hex_row + "\n")
                 f.write("\n")
                 f.write(f"{self.entry[1]},{self.entry[0]}\n")
