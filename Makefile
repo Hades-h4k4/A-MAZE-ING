@@ -14,6 +14,12 @@ debug:
 clean:
 	rm -rf __pycache__ .mypy_cache .pytest_cache build dist *.egg-info maze.txt
 
+run:
+	python3 -m src.main default_config.txt
+
+debug:
+	python3 -m pdb -m src.main default_config.txt
+
 lint:
 	flake8 .
 	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
