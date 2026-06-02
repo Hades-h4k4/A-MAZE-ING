@@ -33,7 +33,7 @@ def interactive_menu(config_file: str) -> None:
     config: Dict[str, Any] = parse_config(config_file)
     curr_maze: Optional[MazeGenerator] = None
 
-    hide_solved: bool = False
+    hide_solved: bool = True
 
     while True:
         current_mode: str = config.get("DISPLAY_MODE", "ascii").upper()
